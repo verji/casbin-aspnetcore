@@ -7,6 +7,10 @@ on:
         description: 'Version suffix (e.g., verji.1)'
         required: true
         default: 'verji.1'
+  # Temporary: remove after testing
+  push:
+    branches:
+      - taj/fix-nuget-publishing
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,7 +59,9 @@ jobs:
         echo "Last tag is: $LastTag";
         $BaseVersion = ($LastTag).TrimStart('v');
         echo "Base version: $BaseVersion";
-        $Version = "$BaseVersion-${{ github.event.inputs.suffix }}";
+        $Suffix = "${{ github.event.inputs.suffix }}";
+        if ([string]::IsNullOrEmpty($Suffix)) { $Suffix = "verji.1" };
+        $Version = "$BaseVersion-$Suffix";
         echo "Publishing version: $Version";
         dotnet pack -c Release -o packages /p:PackageVersion=$Version /p:Version=$BaseVersion;
 
