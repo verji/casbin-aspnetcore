@@ -1,0 +1,72 @@
+name: Release to Verji
+
+on:
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Version suffix (e.g., verji.1)'
+        required: true
+        default: 'verji.1'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Git fetch tags
+      run: git fetch --tags
+
+    - name: Check tags
+      run: git tag -l -n
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+          dotnet-version: |
+              3.1.x
+              5.0.x
+              6.0.x
+              7.0.x
+          include-prerelease: true
+
+    - name: Check .NET info
+      run: dotnet --info
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build -c Release --no-restore
+
+    - name: Test solution
+      run: dotnet test -c Release --no-build --no-restore --verbosity normal
+
+    - name: Pack packages
+      run: |
+        $LastTag = git describe --tags (git rev-list --tags --max-count=1);
+        echo "Last tag is: $LastTag";
+        $BaseVersion = ($LastTag).TrimStart('v');
+        echo "Base version: $BaseVersion";
+        $Version = "$BaseVersion-${{ github.event.inputs.suffix }}";
+        echo "Publishing version: $Version";
+        dotnet pack -c Release -o packages /p:PackageVersion=$Version /p:Version=$BaseVersion;
+
+    - name: Upload packages artefacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: "drop-ci-packages"
+        path: './packages'
+
+    - name: Add Verji nuget source
+      run: dotnet nuget add source https://nuget.pkg.github.com/verji/index.json --name verji --username verji --password $env:GITHUB_TOKEN
+
+    - name: Push packages to Verji
+      run: dotnet nuget push .\packages\*.nupkg -s verji --skip-duplicate
