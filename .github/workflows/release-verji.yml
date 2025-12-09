@@ -61,7 +61,8 @@ jobs:
         echo "Base version: $BaseVersion";
         $Suffix = "${{ github.event.inputs.suffix }}";
         if ([string]::IsNullOrEmpty($Suffix)) { $Suffix = "verji.1" };
-        $Version = "$BaseVersion-$Suffix";
+        # $Version = "$BaseVersion-$Suffix";
+        $Version = "1.5.1-verji"
         echo "Publishing version: $Version";
         dotnet pack -c Release -o packages /p:PackageVersion=$Version /p:Version=$BaseVersion;
 
